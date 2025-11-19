@@ -3,6 +3,11 @@ import { apiFetch } from './api.js';
 import { dom, showSection, updateTokenIndicator, setStatusText, navigation } from './render.js';
 import { refreshAll, loadGoals, loadHabits, loadHabitLogs, loadDailyLogs, loadAnalytics, loadNotes } from './actions.js';
 
+const modalElements = dom.modal || {};
+let modalCleanup = null;
+let modalListenersReady = false;
+let previousBodyOverflow = '';
+
 export function initNavigation() {
     const defaultSection = state.token ? 'dashboard' : 'login';
     showSection(defaultSection);
@@ -139,6 +144,8 @@ function downloadJsonFile(data, filename) {
 }
 
 export function setupEventListeners() {
+    initDialogControls();
+
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
@@ -357,7 +364,7 @@ async function handleGoalListClick(event) {
     if (addPhaseButton) {
         const goalId = Number(addPhaseButton.dataset.goalAddPhase);
         if (goalId) {
-            focusPhaseCreation(goalId);
+            openPhaseDialog(goalId);
         }
         return;
     }
@@ -426,7 +433,7 @@ async function handlePhaseListClick(event) {
     if (addTaskButton) {
         const phaseId = Number(addTaskButton.dataset.phaseAddTask);
         if (phaseId) {
-            focusTaskCreation(phaseId);
+            openTaskDialog(phaseId);
         }
         return;
     }
@@ -490,52 +497,227 @@ async function handlePhaseListClick(event) {
     }
 }
 
-function focusPhaseCreation(goalId) {
+function openPhaseDialog(goalId) {
     const goal = findGoal(goalId);
-    if (!goal || !dom.phaseGoalInput) {
+    if (!goal) {
         return;
     }
 
-    dom.phaseGoalInput.value = goal.id;
-    setFormContext(dom.phaseContext, `Adding to Goal: #${goal.id} · ${goal.name}`);
-    ensureFormVisible('phaseForm');
-    dom.phaseNameInput?.focus();
-    scrollFormIntoView('phaseForm');
+    openDialog({
+        title: 'Add Phase',
+        content: `
+            <form id="dialogPhaseForm" class="stacked-form">
+                <div class="form-context">Goal #${goal.id} · ${goal.name}</div>
+                <label>Phase name
+                    <input type="text" id="dialogPhaseName" placeholder="Phase name" required />
+                </label>
+                <label>Status
+                    <select id="dialogPhaseStatus">
+                        <option value="planned">Planned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                    </select>
+                </label>
+                <div class="dialog-actions">
+                    <button type="button" class="secondary-action" data-modal-close>Cancel</button>
+                    <button type="submit">Save Phase</button>
+                </div>
+            </form>
+        `,
+        onReady: (container) => {
+            const form = container.querySelector('#dialogPhaseForm');
+            const nameInput = container.querySelector('#dialogPhaseName');
+            const statusSelect = container.querySelector('#dialogPhaseStatus');
+            nameInput?.focus();
+
+            form?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!nameInput?.value.trim()) {
+                    alert('Phase name is required.');
+                    return;
+                }
+
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Saving...';
+
+                try {
+                    await apiFetch(`/goals/${goal.id}/phases`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            name: nameInput.value.trim(),
+                            status: statusSelect?.value || 'planned',
+                        }),
+                    });
+                    closeDialog();
+                    await refreshAll();
+                } catch (error) {
+                    alert(error.message || 'Unable to create phase');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            });
+        },
+    });
 }
 
-function focusTaskCreation(phaseId) {
+function openTaskDialog(phaseId) {
     const match = findPhase(phaseId);
-    if (!match || !dom.taskPhaseInput) {
+    if (!match) {
         return;
     }
 
     const { goal, phase } = match;
-    dom.taskPhaseInput.value = phase.id;
-    setFormContext(
-        dom.taskContext,
-        `Adding to Phase: #${phase.id} · ${phase.name} (Goal #${goal.id} · ${goal.name})`
-    );
-    ensureFormVisible('taskForm');
-    dom.taskTitleInput?.focus();
-    scrollFormIntoView('taskForm');
+    openDialog({
+        title: 'Add Task',
+        content: `
+            <form id="dialogTaskForm" class="stacked-form">
+                <div class="form-context">Phase #${phase.id} · ${phase.name} (Goal #${goal.id} · ${goal.name})</div>
+                <label>Task title
+                    <input type="text" id="dialogTaskTitle" placeholder="Task title" required />
+                </label>
+                <label>Details
+                    <textarea id="dialogTaskDesc" placeholder="Details"></textarea>
+                </label>
+                <label>Priority
+                    <select id="dialogTaskPriority">
+                        <option value="low">Low</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">High</option>
+                    </select>
+                </label>
+                <label>Due date
+                    <input type="date" id="dialogTaskDue" />
+                </label>
+                <div class="dialog-actions">
+                    <button type="button" class="secondary-action" data-modal-close>Cancel</button>
+                    <button type="submit">Save Task</button>
+                </div>
+            </form>
+        `,
+        onReady: (container) => {
+            const form = container.querySelector('#dialogTaskForm');
+            const titleInput = container.querySelector('#dialogTaskTitle');
+            const descInput = container.querySelector('#dialogTaskDesc');
+            const prioritySelect = container.querySelector('#dialogTaskPriority');
+            const dueInput = container.querySelector('#dialogTaskDue');
+            titleInput?.focus();
+
+            form?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!titleInput?.value.trim()) {
+                    alert('Task title is required.');
+                    return;
+                }
+
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Saving...';
+
+                try {
+                    await apiFetch(`/phases/${phase.id}/tasks`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            title: titleInput.value.trim(),
+                            description: descInput?.value || '',
+                            priority: prioritySelect?.value || 'normal',
+                            due_date: dueInput?.value || '',
+                        }),
+                    });
+                    closeDialog();
+                    await refreshAll();
+                } catch (error) {
+                    alert(error.message || 'Unable to create task');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            });
+        },
+    });
 }
 
-function ensureFormVisible(formId) {
-    const container = document.querySelector(`[data-form-container="${formId}"]`);
-    if (container?.hasAttribute('hidden')) {
-        container.removeAttribute('hidden');
+function initDialogControls() {
+    if (modalListenersReady || !modalElements.root) {
+        return;
     }
 
-    const toggle = document.querySelector(`[data-toggle-form="${formId}"]`);
-    if (toggle) {
-        toggle.setAttribute('aria-expanded', 'true');
+    modalElements.root.addEventListener('click', (event) => {
+        const closeTarget = event.target.closest('[data-modal-close]');
+        if (closeTarget) {
+            event.preventDefault();
+            closeDialog();
+        }
+    });
+
+    document.addEventListener('keydown', handleDialogEscape);
+    modalListenersReady = true;
+}
+
+function openDialog({ title, content, onReady }) {
+    if (!modalElements.root || !modalElements.content || !modalElements.title) {
+        return;
+    }
+
+    modalElements.title.textContent = title || '';
+    if (typeof content === 'string') {
+        modalElements.content.innerHTML = content;
+    } else {
+        modalElements.content.innerHTML = '';
+        if (content instanceof Node) {
+            modalElements.content.appendChild(content);
+        }
+    }
+
+    modalElements.root.setAttribute('aria-hidden', 'false');
+    lockBodyScroll();
+    modalCleanup = typeof onReady === 'function' ? onReady(modalElements.content) : null;
+}
+
+function closeDialog() {
+    if (!modalElements.root || !modalElements.content || !modalElements.title) {
+        return;
+    }
+
+    modalElements.root.setAttribute('aria-hidden', 'true');
+    modalElements.content.innerHTML = '';
+    modalElements.title.textContent = '';
+
+    if (typeof modalCleanup === 'function') {
+        modalCleanup();
+    }
+    modalCleanup = null;
+    unlockBodyScroll();
+}
+
+function handleDialogEscape(event) {
+    if (event.key === 'Escape' && isDialogOpen()) {
+        event.preventDefault();
+        closeDialog();
     }
 }
 
-function scrollFormIntoView(formId) {
-    const container = document.querySelector(`[data-form-container="${formId}"]`);
-    const target = container || document.getElementById(formId);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function isDialogOpen() {
+    return Boolean(modalElements.root && modalElements.root.getAttribute('aria-hidden') !== 'true');
+}
+
+function lockBodyScroll() {
+    if (!document.body) {
+        return;
+    }
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScroll() {
+    if (!document.body) {
+        return;
+    }
+    document.body.style.overflow = previousBodyOverflow || '';
+    previousBodyOverflow = '';
 }
 
 function setFormContext(element, text) {

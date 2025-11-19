@@ -16,6 +16,11 @@ export const dom = {
     taskContext: document.getElementById('taskContext'),
     phaseNameInput: document.getElementById('phaseName'),
     taskTitleInput: document.getElementById('taskTitle'),
+    modal: {
+        root: document.getElementById('dialogRoot'),
+        title: document.getElementById('dialogTitle'),
+        content: document.getElementById('dialogContent'),
+    },
     stats: {
         goals: document.getElementById('statGoals'),
         done: document.getElementById('statDone'),
