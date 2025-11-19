@@ -8,8 +8,8 @@ services:
     env_file:
       - .env
     networks:
-      - coolify-internal
+      - wc4k4o0s84c0cw84wk0w4kco
 
 networks:
-  coolify-internal:
+  wc4k4o0s84c0cw84wk0w4kco:
     external: true
