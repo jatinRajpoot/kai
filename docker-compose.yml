@@ -8,7 +8,23 @@ services:
     env_file:
       - .env
     networks:
-      - app-net
+      - coolify-internal
 
 networks:
-  app-net:
+  coolify-internal:
+    external: true
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8888:80"
+    env_file:
+      - .env
+    networks:
+      - coolify-internal
+
+networks:
+  coolify-internal:
+    external: true
