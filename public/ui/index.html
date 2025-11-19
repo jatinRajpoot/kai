@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="app-shell">
-        <aside class="sidebar" aria-label="Primary">
+        <aside id="primarySidebar" class="sidebar" aria-label="Primary">
             <div class="sidebar-brand">
                 <div class="logo-mark">KAI</div>
             </div>
@@ -42,10 +42,22 @@
             </div>
         </aside>
 
+        <div class="sidebar-overlay" data-sidebar-overlay aria-hidden="true"></div>
+
         <div class="app-main">
-            <header>
-                <h1>KAI Control Center</h1>
-                <p class="subtitle">Goals · Knowledge · Habits · Daily reflections</p>
+            <header class="page-header">
+                <div class="page-title">
+                    <h1>KAI Control Center</h1>
+                    <p class="subtitle">Goals · Knowledge · Habits · Daily reflections</p>
+                </div>
+                <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-controls="primarySidebar" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="sidebar-toggle-icon" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                    <span class="sidebar-toggle-text">Menu</span>
+                </button>
             </header>
 
             <main id="content">
