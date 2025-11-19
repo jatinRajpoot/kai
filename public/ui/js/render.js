@@ -6,6 +6,16 @@ export const dom = {
     goalsList: document.getElementById('goalsList'),
     phasesList: document.getElementById('phasesList'),
     tasksList: document.getElementById('tasksList'),
+    phaseForm: document.getElementById('phaseForm'),
+    taskForm: document.getElementById('taskForm'),
+    phaseFormContainer: document.querySelector('[data-form-container="phaseForm"]'),
+    taskFormContainer: document.querySelector('[data-form-container="taskForm"]'),
+    phaseGoalInput: document.getElementById('phaseGoalId'),
+    taskPhaseInput: document.getElementById('taskPhaseId'),
+    phaseContext: document.getElementById('phaseContext'),
+    taskContext: document.getElementById('taskContext'),
+    phaseNameInput: document.getElementById('phaseName'),
+    taskTitleInput: document.getElementById('taskTitle'),
     stats: {
         goals: document.getElementById('statGoals'),
         done: document.getElementById('statDone'),
@@ -82,6 +92,7 @@ export function renderGoals() {
             ? `<button type="button" class="status-advance" data-goal-status="${goal.id}" data-next-status="${nextStatus}">Mark ${formatStatusLabel(nextStatus)}</button>`
             : '<span class="done-label">Completed</span>';
         const deleteControl = `<button type="button" class="ghost-danger" data-goal-delete="${goal.id}">Delete</button>`;
+        const addPhaseControl = `<button type="button" class="secondary-action" data-goal-add-phase="${goal.id}">Add Phase</button>`;
         el.innerHTML = `
             <div class="item-header">
                 <div>
@@ -93,6 +104,7 @@ export function renderGoals() {
             <p>${goal.description || ''}</p>
             <small>${doneTasks}/${totalTasks} tasks done</small>
             <div class="task-actions">
+                ${addPhaseControl}
                 ${statusControl}
                 ${deleteControl}
             </div>
@@ -132,6 +144,7 @@ export function renderPhases() {
                 ? `<button type="button" class="status-advance" data-phase-status="${phase.id}" data-next-status="${nextStatus}">Move to ${formatStatusLabel(nextStatus)}</button>`
                 : '<span class="done-label">Completed</span>';
             const deleteControl = `<button type="button" class="ghost-danger" data-phase-delete="${phase.id}">Delete</button>`;
+            const addTaskControl = `<button type="button" class="secondary-action" data-phase-add-task="${phase.id}">Add Task</button>`;
             el.innerHTML = `
                 <div class="item-header">
                     <strong>#${phase.id} · ${phase.name}</strong>
@@ -139,6 +152,7 @@ export function renderPhases() {
                 </div>
                 <small>Goal #${phase.goalId} · ${phase.goalName}</small>
                 <div class="task-actions">
+                    ${addTaskControl}
                     ${statusControl}
                     ${deleteControl}
                 </div>

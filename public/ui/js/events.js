@@ -186,6 +186,7 @@ export function setupEventListeners() {
                 body: JSON.stringify(payload),
             });
             phaseForm.reset();
+            clearPhaseSelection();
             refreshAll();
         });
     }
@@ -205,6 +206,7 @@ export function setupEventListeners() {
                 body: JSON.stringify(payload),
             });
             taskForm.reset();
+            clearTaskSelection();
             refreshAll();
         });
     }
@@ -351,6 +353,15 @@ async function handleTaskListClick(event) {
 }
 
 async function handleGoalListClick(event) {
+    const addPhaseButton = event.target.closest('button[data-goal-add-phase]');
+    if (addPhaseButton) {
+        const goalId = Number(addPhaseButton.dataset.goalAddPhase);
+        if (goalId) {
+            focusPhaseCreation(goalId);
+        }
+        return;
+    }
+
     const deleteButton = event.target.closest('button[data-goal-delete]');
     if (deleteButton) {
         const goalId = Number(deleteButton.dataset.goalDelete);
@@ -411,6 +422,15 @@ async function handleGoalListClick(event) {
 }
 
 async function handlePhaseListClick(event) {
+    const addTaskButton = event.target.closest('button[data-phase-add-task]');
+    if (addTaskButton) {
+        const phaseId = Number(addTaskButton.dataset.phaseAddTask);
+        if (phaseId) {
+            focusTaskCreation(phaseId);
+        }
+        return;
+    }
+
     const deleteButton = event.target.closest('button[data-phase-delete]');
     if (deleteButton) {
         const phaseId = Number(deleteButton.dataset.phaseDelete);
@@ -468,4 +488,105 @@ async function handlePhaseListClick(event) {
         button.disabled = false;
         button.textContent = original;
     }
+}
+
+function focusPhaseCreation(goalId) {
+    const goal = findGoal(goalId);
+    if (!goal || !dom.phaseGoalInput) {
+        return;
+    }
+
+    dom.phaseGoalInput.value = goal.id;
+    setFormContext(dom.phaseContext, `Adding to Goal: #${goal.id} · ${goal.name}`);
+    ensureFormVisible('phaseForm');
+    dom.phaseNameInput?.focus();
+    scrollFormIntoView('phaseForm');
+}
+
+function focusTaskCreation(phaseId) {
+    const match = findPhase(phaseId);
+    if (!match || !dom.taskPhaseInput) {
+        return;
+    }
+
+    const { goal, phase } = match;
+    dom.taskPhaseInput.value = phase.id;
+    setFormContext(
+        dom.taskContext,
+        `Adding to Phase: #${phase.id} · ${phase.name} (Goal #${goal.id} · ${goal.name})`
+    );
+    ensureFormVisible('taskForm');
+    dom.taskTitleInput?.focus();
+    scrollFormIntoView('taskForm');
+}
+
+function ensureFormVisible(formId) {
+    const container = document.querySelector(`[data-form-container="${formId}"]`);
+    if (container?.hasAttribute('hidden')) {
+        container.removeAttribute('hidden');
+    }
+
+    const toggle = document.querySelector(`[data-toggle-form="${formId}"]`);
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function scrollFormIntoView(formId) {
+    const container = document.querySelector(`[data-form-container="${formId}"]`);
+    const target = container || document.getElementById(formId);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setFormContext(element, text) {
+    if (!element) {
+        return;
+    }
+
+    if (!text) {
+        element.textContent = '';
+        element.hidden = true;
+        return;
+    }
+
+    element.textContent = text;
+    element.hidden = false;
+}
+
+function clearPhaseSelection() {
+    if (dom.phaseGoalInput) {
+        dom.phaseGoalInput.value = '';
+    }
+    setFormContext(dom.phaseContext, null);
+}
+
+function clearTaskSelection() {
+    if (dom.taskPhaseInput) {
+        dom.taskPhaseInput.value = '';
+    }
+    setFormContext(dom.taskContext, null);
+}
+
+function findGoal(goalId) {
+    const numericId = Number(goalId);
+    if (!numericId) {
+        return null;
+    }
+    return state.goals.find((goal) => Number(goal.id) === numericId) || null;
+}
+
+function findPhase(phaseId) {
+    const numericId = Number(phaseId);
+    if (!numericId) {
+        return null;
+    }
+
+    for (const goal of state.goals) {
+        const match = (goal.phases || []).find((phase) => Number(phase.id) === numericId);
+        if (match) {
+            return { goal, phase: match };
+        }
+    }
+
+    return null;
 }

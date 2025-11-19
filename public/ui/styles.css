@@ -451,6 +451,20 @@ button:hover {
     gap: 0.5rem;
 }
 
+.secondary-action {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+.secondary-action:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
 .task-complete {
     background: transparent;
     color: #0b0b0b;
@@ -501,6 +515,16 @@ button:hover {
 
 .done-label {
     font-weight: 600;
+}
+
+.form-context {
+    margin-bottom: 0.25rem;
+    padding: 0.65rem 0.85rem;
+    border-left: 3px solid var(--primary);
+    border-radius: var(--radius-sm);
+    background: var(--primary-light);
+    color: var(--text);
+    font-size: 0.9rem;
 }
 
 .empty-text {

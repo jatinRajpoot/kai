@@ -141,7 +141,8 @@
                 <div class="panel-form" data-form-container="phaseForm" hidden>
                     <form id="phaseForm" class="stacked-form">
                         <h3>Create Phase</h3>
-                        <input type="number" id="phaseGoalId" placeholder="Goal ID" required />
+                        <div id="phaseContext" class="form-context" hidden></div>
+                        <input type="hidden" id="phaseGoalId" required />
                         <input type="text" id="phaseName" placeholder="Phase name" required />
                         <select id="phaseStatus">
                             <option value="planned">Planned</option>
@@ -154,7 +155,8 @@
                 <div class="panel-form" data-form-container="taskForm" hidden>
                     <form id="taskForm" class="stacked-form">
                         <h3>Create Task</h3>
-                        <input type="number" id="taskPhaseId" placeholder="Phase ID" required />
+                        <div id="taskContext" class="form-context" hidden></div>
+                        <input type="hidden" id="taskPhaseId" required />
                         <input type="text" id="taskTitle" placeholder="Task title" required />
                         <textarea id="taskDesc" placeholder="Details"></textarea>
                         <select id="taskPriority">
