@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KAI Dashboard</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Primary">
+            <div class="sidebar-brand">
+                <div class="logo-mark">KAI</div>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-group">
+                    <div class="nav-group-title">System</div>
+                    <button type="button" class="nav-btn active" data-nav="login">Login</button>
+                    <button type="button" class="nav-btn" data-nav="dashboard">Dashboard</button>
+                    <button type="button" class="nav-btn" data-nav="backup">Backup</button>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Work</div>
+                    <button type="button" class="nav-btn" data-nav="goals">Goals</button>
+                    <button type="button" class="nav-btn" data-nav="phases">Phases & Tasks</button>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Notes</div>
+                    <button type="button" class="nav-btn" data-nav="knowledge">Knowledge</button>
+                    <button type="button" class="nav-btn" data-nav="important">Important</button>
+                    <button type="button" class="nav-btn" data-nav="ideas">Ideas</button>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Journal</div>
+                    <button type="button" class="nav-btn" data-nav="habits">Habits</button>
+                    <button type="button" class="nav-btn" data-nav="daily">Daily Logs</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header>
+                <h1>KAI Control Center</h1>
+                <p class="subtitle">Goals · Knowledge · Habits · Daily reflections</p>
+            </header>
+
+            <main id="content">
+            <section class="panel" data-section="login">
+                <div class="panel-header">
+                    <p class="eyebrow">Access</p>
+                    <h2>Sign In</h2>
+                </div>
+                <form id="loginForm" class="stacked-form">
+                    <label>Email
+                        <input type="email" id="email" required placeholder="owner@kai.local" />
+                    </label>
+                    <label>Password
+                        <input type="password" id="password" required placeholder="••••••••" />
+                    </label>
+                    <button type="submit">Get Token</button>
+                </form>
+                <div class="token-status">
+                    <span class="dot" id="tokenDot"></span>
+                    <span id="tokenLabel">Not authenticated</span>
+                </div>
+            </section>
+
+            <section class="panel" data-section="dashboard">
+                <div class="panel-header">
+                    <p class="eyebrow">Pulse</p>
+                    <h2>Progress Snapshot</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span>Total Goals</span>
+                        <strong id="statGoals">0</strong>
+                    </div>
+                    <div class="stat">
+                        <span>Tasks Completed</span>
+                        <strong id="statDone">0</strong>
+                    </div>
+                    <div class="stat">
+                        <span>Tasks Today</span>
+                        <strong id="statToday">0</strong>
+                    </div>
+                    <div class="stat">
+                        <span>Task Streak (days)</span>
+                        <strong id="statStreak">0</strong>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <canvas id="tasksTrendChart" height="160"></canvas>
+                    <canvas id="habitStreakChart" height="160"></canvas>
+                </div>
+            </section>
+
+            <section class="panel" data-section="goals">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Planning</p>
+                        <h2>Goals</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="goalForm" aria-controls="goalForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add goal</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="goalForm" hidden>
+                    <form id="goalForm" class="inline-form">
+                        <input type="text" id="goalName" placeholder="Goal name" required />
+                        <input type="text" id="goalDesc" placeholder="Optional description" />
+                        <button type="submit">Add Goal</button>
+                    </form>
+                </div>
+                <div id="goalsList" class="list"></div>
+            </section>
+
+            <section class="panel" data-section="phases">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Execution</p>
+                        <h2>Phases & Tasks</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="phaseForm" aria-controls="phaseForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add phase</span>
+                        </button>
+                        <button type="button" class="panel-action" data-toggle-form="taskForm" aria-controls="taskForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add task</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="phaseForm" hidden>
+                    <form id="phaseForm" class="stacked-form">
+                        <h3>Create Phase</h3>
+                        <input type="number" id="phaseGoalId" placeholder="Goal ID" required />
+                        <input type="text" id="phaseName" placeholder="Phase name" required />
+                        <select id="phaseStatus">
+                            <option value="planned">Planned</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done</option>
+                        </select>
+                        <button type="submit">Save Phase</button>
+                    </form>
+                </div>
+                <div class="panel-form" data-form-container="taskForm" hidden>
+                    <form id="taskForm" class="stacked-form">
+                        <h3>Create Task</h3>
+                        <input type="number" id="taskPhaseId" placeholder="Phase ID" required />
+                        <input type="text" id="taskTitle" placeholder="Task title" required />
+                        <textarea id="taskDesc" placeholder="Details"></textarea>
+                        <select id="taskPriority">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                        </select>
+                        <input type="date" id="taskDue" />
+                        <button type="submit">Save Task</button>
+                    </form>
+                </div>
+                <div class="grid-2 lists-grid">
+                    <div>
+                        <h3>Phases</h3>
+                        <div id="phasesList" class="list"></div>
+                    </div>
+                    <div>
+                        <h3>Tasks</h3>
+                        <div id="tasksList" class="list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel" data-section="knowledge">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Knowledge Base</p>
+                        <h2>Research + Learnings</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="knowledgeForm" aria-controls="knowledgeForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add knowledge entry</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="knowledgeForm" hidden>
+                    <form id="knowledgeForm" data-endpoint="knowledge" class="noteForm">
+                        <input type="text" name="title" placeholder="Learning" required />
+                        <textarea name="content" placeholder="Resources or context"></textarea>
+                        <button type="submit">Save</button>
+                    </form>
+                </div>
+                <ul id="knowledgeList"></ul>
+            </section>
+
+            <section class="panel" data-section="important">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Focus</p>
+                        <h2>Important Notes</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="importantForm" aria-controls="importantForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add important note</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="importantForm" hidden>
+                    <form id="importantForm" data-endpoint="important" class="noteForm">
+                        <input type="text" name="title" placeholder="Reminder" required />
+                        <textarea name="content" placeholder="Details"></textarea>
+                        <button type="submit">Save</button>
+                    </form>
+                </div>
+                <ul id="importantList"></ul>
+            </section>
+
+            <section class="panel" data-section="ideas">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Ideation</p>
+                        <h2>Idea Board</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="ideasForm" aria-controls="ideasForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add idea</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="ideasForm" hidden>
+                    <form id="ideasForm" data-endpoint="ideas" class="noteForm">
+                        <input type="text" name="title" placeholder="Idea" required />
+                        <textarea name="content" placeholder="Notes"></textarea>
+                        <button type="submit">Save</button>
+                    </form>
+                </div>
+                <ul id="ideasList"></ul>
+            </section>
+
+            <section class="panel" data-section="habits">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Rhythm</p>
+                        <h2>Habit Log</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="habitCreateForm" aria-controls="habitCreateForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add habit</span>
+                        </button>
+                        <button type="button" class="panel-action" data-toggle-form="habitForm" aria-controls="habitForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Track habit</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="habitCreateForm" hidden>
+                    <form id="habitCreateForm" class="inline-form">
+                        <input type="text" id="habitCreateName" placeholder="Habit name" required />
+                        <button type="submit">Create Habit</button>
+                    </form>
+                </div>
+                <div class="panel-form" data-form-container="habitForm" hidden>
+                    <form id="habitForm" class="noteForm">
+                        <input type="text" id="habitName" list="habitOptions" placeholder="Habit" required />
+                        <datalist id="habitOptions"></datalist>
+                        <select id="habitStatus">
+                            <option value="1">Completed</option>
+                            <option value="0">Skipped</option>
+                        </select>
+                        <input type="date" id="habitDate" />
+                        <button type="submit">Track</button>
+                    </form>
+                </div>
+                <div class="grid-2 lists-grid">
+                    <div>
+                        <h3>Habits</h3>
+                        <ul id="habitsList"></ul>
+                    </div>
+                    <div>
+                        <h3>Recent Logs</h3>
+                        <ul id="habitLogs"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel" data-section="daily">
+                <div class="panel-header has-actions">
+                    <div>
+                        <p class="eyebrow">Reflection</p>
+                        <h2>Daily Log</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="panel-action" data-toggle-form="dailyForm" aria-controls="dailyForm" aria-expanded="false">
+                            <span aria-hidden="true">＋</span>
+                            <span class="sr-only">Add daily log</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-form" data-form-container="dailyForm" hidden>
+                    <form id="dailyForm" class="noteForm">
+                        <input type="date" id="dailyDate" />
+                        <textarea id="dailySummary" placeholder="Summary"></textarea>
+                        <input type="text" id="dailyMood" placeholder="Mood" />
+                        <input type="text" id="dailyEnergy" placeholder="Energy" />
+                        <button type="submit">Save Day</button>
+                    </form>
+                </div>
+                <ul id="dailyList"></ul>
+            </section>
+
+            <section class="panel" data-section="backup">
+                <div class="panel-header">
+                    <p class="eyebrow">Safety</p>
+                    <h2>Backup &amp; Restore</h2>
+                </div>
+                <div class="grid-2 lists-grid">
+                    <div class="card-block">
+                        <h3>Download snapshot</h3>
+                        <p>Export a JSON copy of every table for safekeeping.</p>
+                        <button type="button" id="backupDownloadBtn">Create Backup</button>
+                        <p class="status-text" id="backupExportStatus">No backup generated yet.</p>
+                    </div>
+                    <div class="card-block">
+                        <h3>Import snapshot</h3>
+                        <p>Restore from a file exported by KAI. Existing rows are replaced per table.</p>
+                        <form id="backupImportForm" class="stacked-form">
+                            <input type="file" id="backupFileInput" accept="application/json,.json" required />
+                            <button type="submit">Import Data</button>
+                        </form>
+                        <p class="status-text" id="backupImportStatus">Select a backup file to begin.</p>
+                    </div>
+                </div>
+            </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="/ui/app.js" type="module"></script>
+</body>
+</html>

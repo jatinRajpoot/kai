@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KAI API Reference</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+</head>
+<body class="doc-page">
+    <header class="doc-hero">
+        <div class="doc-hero-top">
+            <a class="logo-mark" href="/ui/">KAI</a>
+            <a class="doc-back" href="/ui/">Back to dashboard</a>
+        </div>
+        <p class="eyebrow">API Reference</p>
+        <h1>Build on top of the KAI Productivity API</h1>
+        <p class="doc-lede">
+            Every controller in this repository is exposed through a lightweight JSON REST API. Use the
+            shared bearer token to integrate your own automations, scheduled jobs, or companion apps.
+        </p>
+        <div class="doc-callouts">
+            <div>
+                <strong>Base URL</strong>
+                <span>http://localhost:8080</span>
+            </div>
+            <div>
+                <strong>Authentication</strong>
+                <span>Authorization: Bearer &lt;token&gt;</span>
+            </div>
+            <div>
+                <strong>Content type</strong>
+                <span>application/json</span>
+            </div>
+        </div>
+        <nav class="doc-toc" aria-label="On-page navigation">
+            <a href="#requests">Requests</a>
+            <a href="#auth">Auth</a>
+            <a href="#goals">Goals &amp; Phases</a>
+            <a href="#tasks">Tasks</a>
+            <a href="#notes">Ideas &amp; Notes</a>
+            <a href="#habits">Habits</a>
+            <a href="#daily">Daily Logs</a>
+            <a href="#analytics">Analytics</a>
+            <a href="#backup">Backup &amp; Restore</a>
+            <a href="#errors">Errors</a>
+        </nav>
+    </header>
+
+    <main class="doc-main">
+        <section id="requests" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Request fundamentals</h2>
+            </div>
+            <p>
+                All endpoints are versionless and respond with JSON. Send a bearer token on every request
+                except <code>/auth/login</code>. IDs are numeric, timestamps are ISO-8601 strings, and dates use
+                <code>YYYY-MM-DD</code>.
+            </p>
+            <ul class="doc-list">
+                <li>Always include <code>Content-Type: application/json</code> when a body is sent.</li>
+                <li>The router supports CORS preflight automatically via <code>OPTIONS</code> requests.</li>
+                <li>Successful responses wrap payloads inside a <code>data</code> envelope; errors return an
+                    <code>error</code> string.</li>
+            </ul>
+            <div class="doc-columns">
+                <div>
+                    <h3>Sample request</h3>
+<pre class="code-block"><code>curl http://localhost:8080/goals \
+  -H "Authorization: Bearer YOUR_TOKEN"
+</code></pre>
+                </div>
+                <div>
+                    <h3>Response envelope</h3>
+<pre class="code-block"><code>{
+  "data": [...],
+  "meta": {
+    "timestamp": "2025-11-15T09:18:00Z"
+  }
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="auth" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Authentication</h2>
+                <span class="pill">POST /auth/login</span>
+            </div>
+            <p>
+                Exchange the configured email/password (from <code>.env</code> or defaults) for the shared API token.
+                The returned token must be supplied in the <code>Authorization</code> header for all other routes.
+            </p>
+            <div class="doc-columns">
+                <div>
+                    <h3>Request body</h3>
+<pre class="code-block"><code>{
+  "email": "owner@kai.local",
+  "password": "secret123"
+}
+</code></pre>
+                    <h3>cURL</h3>
+<pre class="code-block"><code>curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@kai.local","password":"secret123"}'
+</code></pre>
+                </div>
+                <div>
+                    <h3>Successful response</h3>
+<pre class="code-block"><code>{
+  "data": {
+    "token": "changeme-token"
+  },
+  "meta": {
+    "timestamp": "2025-11-15T09:18:00Z"
+  }
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="goals" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Goals &amp; phases</h2>
+            </div>
+            <p>
+                Goals represent top-level outcomes. Phases belong to goals and inherit their IDs from
+                the URL path. Phase creation/update enforces a name and optional status/date metadata.
+            </p>
+            <table class="endpoint-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/goals</code></td>
+                        <td>List goals with <code>phase_count</code>, <code>task_count</code>, and <code>done_count</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/goals</code></td>
+                        <td>Create a goal (<code>name</code> required; optional <code>description</code>, <code>status</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/goals/{id}</code></td>
+                        <td>Fetch a single goal plus embedded <code>phases</code> and <code>tasks</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-patch">PATCH</span></td>
+                        <td><code>/goals/{id}</code></td>
+                        <td>Update any of <code>name</code>, <code>description</code>, or <code>status</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">DELETE</span></td>
+                        <td><code>/goals/{id}</code></td>
+                        <td>Remove a goal and cascade delete related phases/tasks.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/goals/{id}/phases</code></td>
+                        <td>List phases for a goal.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/goals/{id}/phases</code></td>
+                        <td>Create a phase (<code>name</code> required; optional <code>status</code>, <code>start_date</code>, <code>end_date</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-patch">PATCH</span></td>
+                        <td><code>/phases/{id}</code></td>
+                        <td>Update phase fields (<code>name</code>, <code>status</code>, <code>start_date</code>, <code>end_date</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">DELETE</span></td>
+                        <td><code>/phases/{id}</code></td>
+                        <td>Delete a phase and cascade delete nested tasks.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="doc-columns">
+                <div>
+                    <h3>Create goal</h3>
+<pre class="code-block"><code>{
+  "name": "Dashboard redesign",
+  "description": "Ship new control center",
+  "status": "in_progress"
+}
+</code></pre>
+                </div>
+                <div>
+                    <h3>GET /goals/12 response excerpt</h3>
+<pre class="code-block"><code>{
+  "data": {
+    "id": 12,
+    "name": "Dashboard redesign",
+    "status": "in_progress",
+    "phases": [{ "id": 41, "name": "Research" }],
+    "tasks": [{ "id": 88, "title": "Run usability tests" }]
+  }
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="tasks" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Tasks</h2>
+            </div>
+            <p>
+                Tasks live under phases. Titles are required; <code>status</code> defaults to <code>pending</code> and
+                automatically sets <code>completed_at</code> when a task is marked <code>done</code>. Supported priorities:
+                <code>low</code>, <code>normal</code>, <code>high</code>.
+            </p>
+            <table class="endpoint-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/phases/{id}/tasks</code></td>
+                        <td>List tasks for a phase.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/phases/{id}/tasks</code></td>
+                        <td>Create a task (<code>title</code> required; optional <code>description</code>, <code>status</code>, <code>due_date</code>, <code>priority</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-patch">PATCH</span></td>
+                        <td><code>/tasks/{id}</code></td>
+                        <td>Update any mutable task fields, including <code>status</code> transitions.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">DELETE</span></td>
+                        <td><code>/tasks/{id}</code></td>
+                        <td>Delete a task. Response: <code>{"deleted": true}</code>.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="doc-columns">
+                <div>
+                    <h3>Create task payload</h3>
+<pre class="code-block"><code>{
+  "title": "Publish release notes",
+  "description": "Summarize sprint learnings",
+  "due_date": "2025-11-18",
+  "priority": "high"
+}
+</code></pre>
+                </div>
+                <div>
+                    <h3>Mark task done</h3>
+<pre class="code-block"><code>curl -X PATCH http://localhost:8080/tasks/88 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"done"}'
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="notes" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Ideas, knowledge &amp; important notes</h2>
+            </div>
+            <p>
+                The three note collections share the same schema: <code>title</code> (required), optional
+                <code>content</code>, <code>link</code>, and <code>priority</code>. Endpoints differ only by path.
+            </p>
+            <table class="endpoint-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/ideas</code></td>
+                        <td>List every idea entry.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/ideas</code></td>
+                        <td>Create an idea.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/knowledge</code></td>
+                        <td>List knowledge base entries.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/knowledge</code></td>
+                        <td>Create a knowledge entry.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/important</code></td>
+                        <td>List important notes.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/important</code></td>
+                        <td>Create an important note (default priority <code>high</code>).</td>
+                    </tr>
+                </tbody>
+            </table>
+<pre class="code-block"><code>{
+  "title": "Weekly AI report",
+  "content": "Summaries to share with the team",
+  "link": "https://example.com/report",
+  "priority": "normal"
+}
+</code></pre>
+        </section>
+
+        <section id="habits" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Habits &amp; logs</h2>
+            </div>
+            <p>
+                Create named habits once, then log outcomes daily. Logging is idempotent per habit/date pair and
+                supports the statuses <code>done</code>, <code>skipped</code>, or <code>pending</code>.
+            </p>
+            <table class="endpoint-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/habits</code></td>
+                        <td>List habits (alphabetical).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/habits</code></td>
+                        <td>Create a habit (<code>name</code> must be unique).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/habits/log</code></td>
+                        <td>Log a status for a habit. Accepts <code>habit</code> or <code>name</code>, optional <code>log_date</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/habits/logs?days=30</code></td>
+                        <td>Recent logs joined with habit names. <code>days</code> defaults to 30.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="doc-columns">
+                <div>
+                    <h3>Log payload</h3>
+<pre class="code-block"><code>{
+  "habit": "Write journal",
+  "status": "done",
+  "log_date": "2025-11-14"
+}
+</code></pre>
+                </div>
+                <div>
+                    <h3>Log response</h3>
+<pre class="code-block"><code>{
+  "data": {
+    "habit": { "id": 3, "name": "Write journal" },
+    "log": {
+      "habit_id": 3,
+      "log_date": "2025-11-14",
+      "status": "done"
+    }
+  }
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="daily" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Daily logs</h2>
+            </div>
+            <p>
+                Daily logs are upserts keyed by <code>log_date</code>. Send the log again for the same date to update
+                summary, mood, or energy levels.
+            </p>
+            <table class="endpoint-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-pill method-post">POST</span></td>
+                        <td><code>/daily/log</code></td>
+                        <td>Create or update a log (<code>log_date</code> optional, defaults to today).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-pill method-get">GET</span></td>
+                        <td><code>/daily/logs?limit=30</code></td>
+                        <td>List logs ordered by date descending. <code>limit</code> defaults to 30.</td>
+                    </tr>
+                </tbody>
+            </table>
+<pre class="code-block"><code>{
+  "log_date": "2025-11-15",
+  "summary": "Deep work on analytics module",
+  "mood": "energized",
+  "energy": "7/10"
+}
+</code></pre>
+        </section>
+
+        <section id="analytics" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Analytics</h2>
+                <span class="pill">GET /analytics</span>
+            </div>
+            <p>
+                Aggregated snapshot used by the dashboard. It combines goal/task totals, rolling task trend
+                data, habit streaks, and the 7 most recent daily logs.
+            </p>
+<pre class="code-block"><code>{
+  "data": {
+    "goals": 4,
+    "tasks_total": 37,
+    "tasks_done": 21,
+    "tasks_completion_rate": 56.8,
+    "tasks_completed_today": 3,
+    "task_streak_days": 5,
+    "task_trend": [
+      { "date": "2025-11-10", "count": 1 },
+      { "date": "2025-11-11", "count": 0 }
+    ],
+    "habit_streaks": [
+      { "habit": "Workout", "current_streak": 4 }
+    ],
+    "daily_logs": [
+      { "log_date": "2025-11-15", "summary": "..." }
+    ]
+  }
+}
+</code></pre>
+        </section>
+
+                <section id="backup" class="doc-card">
+                        <div class="doc-card-header">
+                                <h2>Backup &amp; restore</h2>
+                        </div>
+                        <p>
+                                Export full-table JSON snapshots or re-import a previously exported payload. These endpoints are
+                                token-protected and operate on every table included in the snapshot, so treat them as
+                                administrative operations.
+                        </p>
+                        <table class="endpoint-table">
+                                <thead>
+                                        <tr>
+                                                <th>Method</th>
+                                                <th>Path</th>
+                                                <th>Description</th>
+                                        </tr>
+                                </thead>
+                                <tbody>
+                                        <tr>
+                                                <td><span class="method-pill method-get">GET</span></td>
+                                                <td><code>/backup/export</code></td>
+                                                <td>Returns <code>{ filename, backup }</code> where <code>backup.tables</code> contains rows for each table.</td>
+                                        </tr>
+                                        <tr>
+                                                <td><span class="method-pill method-post">POST</span></td>
+                                                <td><code>/backup/import</code></td>
+                                                <td>Truncates tables present in the payload and inserts the provided rows.</td>
+                                        </tr>
+                                </tbody>
+                        </table>
+                        <div class="doc-columns">
+                                <div>
+                                        <h3>Export example</h3>
+<pre class="code-block"><code>curl -H "Authorization: Bearer YOUR_TOKEN" \
+    http://localhost:8080/backup/export
+
+# response excerpt
+{
+    "data": {
+        "filename": "kai-backup-20251115-091800.json",
+        "backup": {
+            "version": 1,
+            "generated_at": "2025-11-15T09:18:00Z",
+            "tables": {
+                "goals": [...],
+                "tasks": [...]
+            }
+        }
+    }
+}
+</code></pre>
+                                </div>
+                                <div>
+                                        <h3>Import payload</h3>
+<pre class="code-block"><code>curl -X POST http://localhost:8080/backup/import \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+                "backup": {
+                    "version": 1,
+                    "tables": {
+                        "goals": [...],
+                        "tasks": [...]
+                    }
+                }
+            }'
+</code></pre>
+                                        <p class="doc-footnote">Only tables present under <code>backup.tables</code> are truncated/reloaded. Use a clean database before calling import in production.</p>
+                                </div>
+                        </div>
+                </section>
+
+        <section id="errors" class="doc-card">
+            <div class="doc-card-header">
+                <h2>Errors &amp; status codes</h2>
+            </div>
+            <ul class="doc-list">
+                <li><strong>401 Unauthorized</strong> &mdash; missing or incorrect bearer token.</li>
+                <li><strong>404 Not Found</strong> &mdash; requesting a resource ID that does not exist.</li>
+                <li><strong>422 Unprocessable Entity</strong> &mdash; validation failure (e.g., missing required fields).</li>
+                <li><strong>500 Server Error</strong> &mdash; unexpected exception (masked unless <code>APP_DEBUG=true</code>).</li>
+            </ul>
+<pre class="code-block"><code>{
+    "error": "Goal name is required",
+  "meta": {
+    "timestamp": "2025-11-15T09:18:00Z"
+  }
+}
+</code></pre>
+            <p class="doc-footnote">All error responses share the same <code>error</code> + <code>meta.timestamp</code> shape.</p>
+        </section>
+    </main>
+</body>
+</html>
