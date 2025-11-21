@@ -1,4 +1,5 @@
 import { state, STATUS_FLOW } from './state.js';
+import { getLocalDateString } from './date.js';
 
 export const dom = {
     tokenDot: document.getElementById('tokenDot'),
@@ -6,6 +7,7 @@ export const dom = {
     goalsList: document.getElementById('goalsList'),
     phasesList: document.getElementById('phasesList'),
     tasksList: document.getElementById('tasksList'),
+    dashboardTaskList: document.getElementById('dashboardTaskList'),
     phaseForm: document.getElementById('phaseForm'),
     taskForm: document.getElementById('taskForm'),
     phaseFormContainer: document.querySelector('[data-form-container="phaseForm"]'),
@@ -21,20 +23,13 @@ export const dom = {
         title: document.getElementById('dialogTitle'),
         content: document.getElementById('dialogContent'),
     },
-    stats: {
-        goals: document.getElementById('statGoals'),
-        done: document.getElementById('statDone'),
-        today: document.getElementById('statToday'),
-        streak: document.getElementById('statStreak'),
-    },
     ideasList: document.getElementById('ideasList'),
     knowledgeList: document.getElementById('knowledgeList'),
     importantList: document.getElementById('importantList'),
     habitsList: document.getElementById('habitsList'),
     habitLogs: document.getElementById('habitLogs'),
     dailyList: document.getElementById('dailyList'),
-    tasksTrendChart: document.getElementById('tasksTrendChart'),
-    habitStreakChart: document.getElementById('habitStreakChart'),
+    habitOptions: document.getElementById('habitOptions'),
     backup: {
         downloadButton: document.getElementById('backupDownloadBtn'),
         exportStatus: document.getElementById('backupExportStatus'),
@@ -48,6 +43,63 @@ export const navigation = {
     buttons: Array.from(document.querySelectorAll('[data-nav]')),
     sections: Array.from(document.querySelectorAll('[data-section]')),
 };
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function parseYMD(dateString) {
+    if (!dateString) {
+        return null;
+    }
+    const [year, month, day] = dateString.split('-').map(Number);
+    if ([year, month, day].some((value) => Number.isNaN(value))) {
+        return null;
+    }
+    return new Date(year, (month || 1) - 1, day || 1);
+}
+
+function formatShortDate(dateString) {
+    const date = parseYMD(dateString);
+    if (!date) {
+        return dateString || '';
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getRelativeDueText(dateString, todayString) {
+    const dueDate = parseYMD(dateString);
+    const today = parseYMD(todayString);
+    if (!dueDate || !today) {
+        return null;
+    }
+    const diff = Math.round((dueDate - today) / DAY_IN_MS);
+    if (diff === 0) {
+        return 'Due today';
+    }
+    if (diff === 1) {
+        return 'Due tomorrow';
+    }
+    if (diff > 1) {
+        return `Due in ${diff} days`;
+    }
+    if (diff === -1) {
+        return 'Overdue by 1 day';
+    }
+    return `Overdue by ${Math.abs(diff)} days`;
+}
+
+function buildDueText(dateString, todayString) {
+    if (!dateString) {
+        return '';
+    }
+    const relativeText = getRelativeDueText(dateString, todayString);
+    if (!relativeText) {
+        return `Due ${formatShortDate(dateString)}`;
+    }
+    if (relativeText.startsWith('Due')) {
+        return relativeText;
+    }
+    return `${formatShortDate(dateString)} · ${relativeText}`;
+}
 
 export function updateTokenIndicator() {
     if (!dom.tokenDot) {
@@ -85,6 +137,7 @@ export function renderGoals() {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     state.goals.forEach((goal) => {
         const phaseCount = goal.phase_count ?? (goal.phases ? goal.phases.length : 0);
         const totalTasks = goal.task_count ?? (goal.tasks ? goal.tasks.length : 0);
@@ -114,8 +167,9 @@ export function renderGoals() {
                 ${deleteControl}
             </div>
         `;
-        dom.goalsList.appendChild(el);
+        fragment.appendChild(el);
     });
+    dom.goalsList.appendChild(fragment);
 }
 
 export function renderPhases() {
@@ -137,6 +191,7 @@ export function renderPhases() {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     phases
         .sort(sortByDateDesc)
         .slice(0, 10)
@@ -162,8 +217,9 @@ export function renderPhases() {
                     ${deleteControl}
                 </div>
             `;
-            dom.phasesList.appendChild(el);
+            fragment.appendChild(el);
         });
+    dom.phasesList.appendChild(fragment);
 }
 
 export function renderTasks() {
@@ -185,6 +241,7 @@ export function renderTasks() {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     tasks
         .sort(sortByDateDesc)
         .slice(0, 10)
@@ -208,8 +265,9 @@ export function renderTasks() {
                     ${deleteControl}
                 </div>
             `;
-            dom.tasksList.appendChild(el);
+            fragment.appendChild(el);
         });
+    dom.tasksList.appendChild(fragment);
 }
 
 export function renderHabits() {
@@ -225,6 +283,7 @@ export function renderHabits() {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     state.habits
         .slice()
         .sort(sortByDateDesc)
@@ -239,86 +298,115 @@ export function renderHabits() {
                 meta.textContent = `Created ${habit.created_at.substring(0, 10)}`;
                 li.appendChild(meta);
             }
-            dom.habitsList.appendChild(li);
+            fragment.appendChild(li);
         });
+    dom.habitsList.appendChild(fragment);
 
     updateHabitOptions();
 }
 
 export function updateHabitOptions() {
-    const datalist = document.getElementById('habitOptions');
-    if (!datalist) {
+    if (!dom.habitOptions) {
         return;
     }
 
-    datalist.innerHTML = '';
+    dom.habitOptions.innerHTML = '';
+    const fragment = document.createDocumentFragment();
     state.habits.forEach((habit) => {
         const option = document.createElement('option');
         option.value = habit.name;
-        datalist.appendChild(option);
+        fragment.appendChild(option);
     });
+    dom.habitOptions.appendChild(fragment);
 }
 
-export function renderCharts() {
-    const analytics = state.analytics;
-    if (!analytics) return;
+export function renderDashboardTasks() {
+    if (!dom.dashboardTaskList) return;
 
-    const trendLabels = analytics.task_trend.map((entry) => entry.date.substring(5));
-    const trendData = analytics.task_trend.map((entry) => entry.count);
+    const tasks = state.goals.flatMap(goal =>
+        (goal.tasks || []).map(task => ({
+            ...task,
+            goalName: goal.name,
+            goalId: goal.id
+        }))
+    );
 
-    if (!state.charts.tasks) {
-        state.charts.tasks = new Chart(dom.tasksTrendChart, {
-            type: 'line',
-            data: {
-                labels: trendLabels,
-                datasets: [
-                    {
-                        label: 'Tasks completed',
-                        data: trendData,
-                        borderColor: '#22d3ee',
-                        fill: false,
-                    },
-                ],
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true },
-                },
-            },
-        });
-    } else {
-        state.charts.tasks.data.labels = trendLabels;
-        state.charts.tasks.data.datasets[0].data = trendData;
-        state.charts.tasks.update();
+    const today = getLocalDateString();
+    const pendingTasks = [];
+    const completedToday = [];
+
+    tasks.forEach((task) => {
+        if (task.status === 'done') {
+            if (task.completed_at && task.completed_at.startsWith(today)) {
+                completedToday.push(task);
+            }
+            return;
+        }
+        if (task.due_date && task.due_date <= today) {
+            pendingTasks.push(task);
+        }
+    });
+
+    dom.dashboardTaskList.innerHTML = '';
+    const emptyState = document.getElementById('dashboardEmptyState');
+
+    if (pendingTasks.length === 0 && completedToday.length === 0) {
+        if (emptyState) emptyState.hidden = false;
+        return;
     }
 
-    const habitLabels = analytics.habit_streaks.map((item) => item.habit);
-    const habitData = analytics.habit_streaks.map((item) => item.current_streak);
+    if (emptyState) emptyState.hidden = true;
 
-    if (!state.charts.habits) {
-        state.charts.habits = new Chart(dom.habitStreakChart, {
-            type: 'bar',
-            data: {
-                labels: habitLabels,
-                datasets: [
-                    {
-                        label: 'Habit streak (days)',
-                        data: habitData,
-                        backgroundColor: '#6366f1',
-                    },
-                ],
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true },
-                },
-            },
-        });
-    } else {
-        state.charts.habits.data.labels = habitLabels;
-        state.charts.habits.data.datasets[0].data = habitData;
-        state.charts.habits.update();
+    const fragment = document.createDocumentFragment();
+
+    pendingTasks.sort((a, b) => {
+        const pMap = { high: 3, normal: 2, low: 1 };
+        const pDiff = (pMap[b.priority] || 0) - (pMap[a.priority] || 0);
+        if (pDiff !== 0) return pDiff;
+        return (a.due_date || '').localeCompare(b.due_date || '');
+    });
+
+    const renderTask = (task, options = {}) => {
+        const el = document.createElement('div');
+        el.className = 'todo-item';
+        const priority = (task.priority || 'normal').toLowerCase();
+        const priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1);
+        const dueText = task.due_date ? buildDueText(task.due_date, today) : 'No due date';
+        const dueClassName = ['todo-due'];
+        if (task.due_date && task.due_date < today) {
+            dueClassName.push('todo-overdue');
+        }
+        const completed = options.completed === true;
+        el.innerHTML = `
+            <label class="todo-label${completed ? ' completed' : ''}">
+                ${completed ? '' : `<input type="checkbox" class="todo-checkbox" data-task-id="${task.id}">`}
+                <div class="todo-content">
+                    <div class="todo-header">
+                        <span class="todo-text">${task.title}</span>
+                        <span class="badge status-${priority}">${priorityLabel}</span>
+                    </div>
+                    <div class="todo-details">
+                        <span class="todo-goal">Goal · ${task.goalName}</span>
+                        <span class="${dueClassName.join(' ')}">${dueText}</span>
+                    </div>
+                </div>
+            </label>
+        `;
+        fragment.appendChild(el);
+    };
+
+    pendingTasks.forEach((task) => renderTask(task));
+
+    if (completedToday.length) {
+        const divider = document.createElement('p');
+        divider.className = 'todo-divider';
+        divider.textContent = `Completed today (${completedToday.length})`;
+        fragment.appendChild(divider);
+
+        completedToday.sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+        completedToday.forEach((task) => renderTask(task, { completed: true }));
     }
+    dom.dashboardTaskList.appendChild(fragment);
 }
 
 export function setListEmptyState(element, message) {
@@ -354,14 +442,7 @@ function getNextStatus(currentStatus) {
 }
 
 function sortByDateDesc(a, b) {
-    return getDateValue(b) - getDateValue(a);
-}
-
-function getDateValue(entry) {
-    const stamp = entry?.updated_at || entry?.created_at;
-    if (!stamp) {
-        return 0;
-    }
-    const value = Date.parse(stamp);
-    return Number.isNaN(value) ? 0 : value;
+    const dateA = a.updated_at || a.created_at || '';
+    const dateB = b.updated_at || b.created_at || '';
+    return dateB.localeCompare(dateA);
 }

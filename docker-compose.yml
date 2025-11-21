@@ -1,15 +1,46 @@
-version: "3.9"
+version: '3.8'
 
 services:
   app:
-    build: .
-    ports:
-      - "8888:80"
-    env_file:
-      - .env
+    image: serversideup/php:8.2-fpm-apache
+    container_name: kai_app
+    restart: always
+    environment:
+      - WEB_DOCUMENT_ROOT=/var/www/html/public
+      - PHP_DATE_TIMEZONE=UTC
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-kai}
+      - DB_USERNAME=${DB_USERNAME:-kai}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+    # Install dependencies and start
+    command: sh -c "composer install --no-dev --optimize-autoloader && /init"
     networks:
-      - wc4k4o0s84c0cw84wk0w4kco
+      - kai_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: kai_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-kai}
+      MYSQL_USER: ${DB_USERNAME:-kai}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - kai_network
+
+volumes:
+  mysql_data:
 
 networks:
-  wc4k4o0s84c0cw84wk0w4kco:
-    external: true
+  kai_network:
+    driver: bridge

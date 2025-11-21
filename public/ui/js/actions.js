@@ -1,6 +1,6 @@
 import { apiFetch } from './api.js';
 import { state } from './state.js';
-import { renderGoals, renderPhases, renderTasks, renderHabits, renderCharts, dom } from './render.js';
+import { renderGoals, renderPhases, renderTasks, renderHabits, renderDashboardTasks, dom } from './render.js';
 
 export async function refreshAll() {
     await Promise.all([
@@ -27,6 +27,7 @@ export async function loadGoals() {
     renderGoals();
     renderPhases();
     renderTasks();
+    renderDashboardTasks();
 }
 
 export async function loadNotes(endpoint) {
@@ -76,11 +77,5 @@ export async function loadDailyLogs() {
 }
 
 export async function loadAnalytics() {
-    const analytics = await apiFetch('/analytics');
-    state.analytics = analytics;
-    dom.stats.goals.textContent = analytics.goals;
-    dom.stats.done.textContent = analytics.tasks_done;
-    dom.stats.today.textContent = analytics.tasks_completed_today;
-    dom.stats.streak.textContent = analytics.task_streak_days;
-    renderCharts();
+    // Analytics removed
 }

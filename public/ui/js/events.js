@@ -1,7 +1,8 @@
 import { state, saveToken } from './state.js';
 import { apiFetch } from './api.js';
-import { dom, showSection, updateTokenIndicator, setStatusText, navigation } from './render.js';
+import { dom, showSection, updateTokenIndicator, setStatusText, navigation, renderDashboardTasks } from './render.js';
 import { refreshAll, loadGoals, loadHabits, loadHabitLogs, loadDailyLogs, loadAnalytics, loadNotes } from './actions.js';
+import { getLocalDateString } from './date.js';
 
 const modalElements = dom.modal || {};
 let modalCleanup = null;
@@ -391,6 +392,26 @@ export function setupEventListeners() {
     if (dom.phasesList) {
         dom.phasesList.addEventListener('click', handlePhaseListClick);
     }
+
+    if (dom.dashboardTaskList) {
+        dom.dashboardTaskList.addEventListener('change', handleDashboardTaskChange);
+    }
+
+    if (dom.dashboardDateFilter) {
+        dom.dashboardDateFilter.addEventListener('change', () => {
+            renderDashboardTasks();
+        });
+    }
+
+    const quickAddFab = document.getElementById('quickAddFab');
+    if (quickAddFab) {
+        quickAddFab.addEventListener('click', openQuickAddDialog);
+    }
+
+    setTodayDate(document.getElementById('taskDue'));
+    setTodayDate(document.getElementById('habitDate'));
+    setTodayDate(document.getElementById('dailyDate'));
+    setTodayDate(document.getElementById('dashboardDateFilter'));
 }
 
 async function handleTaskListClick(event) {
@@ -590,6 +611,29 @@ async function handlePhaseListClick(event) {
     }
 }
 
+async function handleDashboardTaskChange(event) {
+    if (!event.target.matches('.todo-checkbox')) return;
+
+    const checkbox = event.target;
+    const taskId = Number(checkbox.dataset.taskId);
+    if (!taskId) return;
+
+    const label = checkbox.closest('.todo-label');
+    if (label) label.classList.add('completed');
+
+    try {
+        await apiFetch(`/tasks/${taskId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'done' }),
+        });
+        await loadGoals();
+    } catch (error) {
+        alert(error.message || 'Unable to update task');
+        checkbox.checked = false;
+        if (label) label.classList.remove('completed');
+    }
+}
+
 function openPhaseDialog(goalId) {
     const goal = findGoal(goalId);
     if (!goal) {
@@ -696,6 +740,7 @@ function openTaskDialog(phaseId) {
             const descInput = container.querySelector('#dialogTaskDesc');
             const prioritySelect = container.querySelector('#dialogTaskPriority');
             const dueInput = container.querySelector('#dialogTaskDue');
+            setTodayDate(dueInput);
             titleInput?.focus();
 
             form?.addEventListener('submit', async (event) => {
@@ -765,9 +810,13 @@ function openDialog({ title, content, onReady }) {
         }
     }
 
+    if (onReady && typeof onReady === 'function') {
+        onReady(modalElements.content);
+    }
+
     modalElements.root.setAttribute('aria-hidden', 'false');
-    lockBodyScroll();
-    modalCleanup = typeof onReady === 'function' ? onReady(modalElements.content) : null;
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
 }
 
 function closeDialog() {
@@ -864,4 +913,72 @@ function findPhase(phaseId) {
     }
 
     return null;
+}
+
+function openQuickAddDialog() {
+    openDialog({
+        title: 'Quick Add',
+        content: `
+            <div class="grid-2" style="gap: 1rem;">
+                <button type="button" class="item" id="qaTask">
+                    <strong>Task</strong>
+                    <small>Add to a phase</small>
+                </button>
+                <button type="button" class="item" id="qaNote">
+                    <strong>Note</strong>
+                    <small>Idea, Knowledge, or Important</small>
+                </button>
+                <button type="button" class="item" id="qaHabit">
+                    <strong>Habit</strong>
+                    <small>Track a habit</small>
+                </button>
+                <button type="button" class="item" id="qaLog">
+                    <strong>Daily Log</strong>
+                    <small>Reflect on your day</small>
+                </button>
+            </div>
+        `,
+        onReady: (container) => {
+            container.querySelector('#qaTask')?.addEventListener('click', () => {
+                closeDialog();
+                showSection('phases');
+                const taskFormBtn = document.querySelector('[data-toggle-form="taskForm"]');
+                if (taskFormBtn && taskFormBtn.getAttribute('aria-expanded') === 'false') {
+                    taskFormBtn.click();
+                }
+            });
+
+            container.querySelector('#qaNote')?.addEventListener('click', () => {
+                closeDialog();
+                showSection('ideas');
+                const ideasFormBtn = document.querySelector('[data-toggle-form="ideasForm"]');
+                if (ideasFormBtn && ideasFormBtn.getAttribute('aria-expanded') === 'false') {
+                    ideasFormBtn.click();
+                }
+            });
+
+            container.querySelector('#qaHabit')?.addEventListener('click', () => {
+                closeDialog();
+                showSection('habits');
+                const habitFormBtn = document.querySelector('[data-toggle-form="habitForm"]');
+                if (habitFormBtn && habitFormBtn.getAttribute('aria-expanded') === 'false') {
+                    habitFormBtn.click();
+                }
+            });
+
+            container.querySelector('#qaLog')?.addEventListener('click', () => {
+                closeDialog();
+                showSection('daily');
+                const dailyFormBtn = document.querySelector('[data-toggle-form="dailyForm"]');
+                if (dailyFormBtn && dailyFormBtn.getAttribute('aria-expanded') === 'false') {
+                    dailyFormBtn.click();
+                }
+            });
+        }
+    });
+}
+
+function setTodayDate(element) {
+    if (!element) return;
+    element.value = getLocalDateString();
 }

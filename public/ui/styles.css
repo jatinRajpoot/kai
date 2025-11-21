@@ -480,6 +480,131 @@ button:hover {
     box-shadow: var(--shadow);
 }
 
+/* Dashboard todo list */
+.todo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.todo-divider {
+    margin: 0.35rem 0 0.1rem;
+    padding: 0.25rem 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.todo-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.todo-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+.todo-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    width: 100%;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+}
+
+.todo-checkbox {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    accent-color: var(--primary);
+}
+
+.todo-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    flex: 1;
+}
+
+.todo-text {
+    line-height: 1.4;
+}
+
+.todo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.todo-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.todo-goal {
+    font-weight: 600;
+}
+
+.todo-due {
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.todo-due.todo-overdue {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.todo-label.completed .todo-text {
+    text-decoration: line-through;
+    color: var(--muted);
+}
+
+.todo-label.completed .badge,
+.todo-label.completed .todo-due {
+    opacity: 0.7;
+}
+
+@media (max-width: 600px) {
+    .todo-label {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .todo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .todo-checkbox {
+        align-self: flex-start;
+    }
+}
+
 /* Modal dialog */
 .modal {
     position: fixed;
@@ -578,6 +703,24 @@ button:hover {
     background: #f1f5f9;
     color: #475569;
     border-color: #e2e8f0;
+}
+
+.badge.status-high {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.badge.status-normal {
+    background: #fef9c3;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.badge.status-low {
+    background: #ecfccb;
+    color: #3f6212;
+    border-color: #d9f99d;
 }
 
 .task-item small {
