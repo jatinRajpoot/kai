@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: serversideup/php:8.2-fpm-apache
+    build: .
     container_name: kai_app
     restart: always
     environment:
@@ -15,11 +15,19 @@ services:
       - DB_USERNAME=${DB_USERNAME:-kai}
       - DB_PASSWORD=${DB_PASSWORD:-password}
     volumes:
-      - .:/var/www/html
+      # Mount public/storage if you have uploads, otherwise no need to mount code in production
+      # For development we might want to mount, but for "easy deployment" we prefer the built image.
+      # We will keep the volume for now to allow easy editing if the user wants, 
+      # BUT for Coolify/Production it's better to rely on the COPY in Dockerfile.
+      # Let's comment it out for a true "deployment" focus, or keep it for dev.
+      # The user asked for "easy deployment on coolify". 
+      # Coolify usually rebuilds on push. 
+      # Let's REMOVE the code volume mount to ensure we use the baked code.
+      - kai_storage:/var/www/html/storage
+    ports:
+      - "8080:8080"
     depends_on:
       - mysql
-    # Install dependencies and start
-    command: sh -c "composer install --no-dev --optimize-autoloader && /init"
     networks:
       - kai_network
 
@@ -40,6 +48,7 @@ services:
 
 volumes:
   mysql_data:
+  kai_storage:
 
 networks:
   kai_network:

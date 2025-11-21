@@ -1,19 +1,18 @@
 # KAI Coolify Deployment Guide
 
-This guide explains how to deploy the KAI application on Coolify using the optimized Docker Compose configuration.
+This guide explains how to deploy the KAI application on Coolify using the optimized Dockerfile-based configuration.
 
 ## Changes Made
 
+- **Added `Dockerfile`**:
+    - Based on `serversideup/php:8.2-fpm-apache`.
+    - Installs dependencies (`composer install`) during the build process.
+    - Copies application code into the image.
 - **Optimized `docker-compose.yml`**:
-    - Replaced custom build with `serversideup/php:8.2-fpm-apache` image.
-    - Added a separate `mysql` service (version 8.0).
-    - Configured volume mounts for code (`.`) and database schema (`./db/schema.sql`).
-    - Added a command to run `composer install` on startup.
-- **Cleaned up Files**:
-    - Removed `Dockerfile`, `docker-entrypoint.sh`, `.dockerignore`, and `.env.production`.
-    - Removed unused `scripts` directory.
-- **Updated Configuration**:
-    - Updated `.env.example` to reflect the new environment variable scheme.
+    - Uses `build: .` to build the custom image.
+    - Removed runtime `composer install` command (faster startup).
+    - Removed code volume mount (production-ready).
+    - Kept `mysql` service configuration.
 
 ## Deployment Steps on Coolify
 
@@ -22,25 +21,24 @@ This guide explains how to deploy the KAI application on Coolify using the optim
     - Choose your repository and branch.
 
 2.  **Configuration**:
-    - Coolify should automatically detect the `docker-compose.yml` file.
-    - The `app` service is configured to use the `serversideup/php:8.2-fpm-apache` image.
+    - Coolify will detect the `docker-compose.yml` and the `Dockerfile`.
+    - It will build the image automatically.
     - The `mysql` service will be created automatically.
 
 3.  **Environment Variables**:
     - Copy the contents of `.env.example` to the Coolify environment variables section.
     - Update the values as needed (especially passwords and `APP_URL`).
-    - Ensure `DB_HOST` is set to `mysql` (the service name in docker-compose).
+    - Ensure `DB_HOST` is set to `mysql`.
 
 4.  **Deploy**:
     - Click **Deploy**.
     - The application will:
-        - Pull the images.
-        - Start the MySQL database and initialize it with `db/schema.sql` (if the volume is empty).
+        - Build the Docker image (installing dependencies).
+        - Start the MySQL database.
         - Start the PHP application.
-        - Run `composer install`.
         - Serve the application.
 
 ## Verification
 
-- Check the Deployment Logs in Coolify to ensure `composer install` completed successfully.
+- Check the Deployment Logs in Coolify to ensure the build passed.
 - Visit the `APP_URL` to verify the application is running.
