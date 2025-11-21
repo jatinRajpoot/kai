@@ -2,54 +2,58 @@ version: '3.8'
 
 services:
   app:
-    build: .
-    container_name: kai_app
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kai-app
+    container_name: kai-app
+    restart: unless-stopped
+    tty: true
     environment:
-      - WEB_DOCUMENT_ROOT=/var/www/html/public
-      - PHP_DATE_TIMEZONE=UTC
-      - DB_CONNECTION=mysql
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_DATABASE=${DB_DATABASE:-kai}
-      - DB_USERNAME=${DB_USERNAME:-kai}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www/html
     volumes:
-      # Mount public/storage if you have uploads, otherwise no need to mount code in production
-      # For development we might want to mount, but for "easy deployment" we prefer the built image.
-      # We will keep the volume for now to allow easy editing if the user wants, 
-      # BUT for Coolify/Production it's better to rely on the COPY in Dockerfile.
-      # Let's comment it out for a true "deployment" focus, or keep it for dev.
-      # The user asked for "easy deployment on coolify". 
-      # Coolify usually rebuilds on push. 
-      # Let's REMOVE the code volume mount to ensure we use the baked code.
-      - kai_storage:/var/www/html/storage
+      - ./:/var/www/html
+    networks:
+      - app-network
+
+  web:
+    image: nginx:alpine
+    container_name: kai-web
+    restart: unless-stopped
+    tty: true
     ports:
-      - "8880:80"
-    depends_on:
-      - mysql
-    networks:
-      - kai_network
-
-  mysql:
-    image: mysql:8.0
-    container_name: kai_mysql
-    restart: always
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-kai}
-      MYSQL_USER: ${DB_USERNAME:-kai}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      - "8000:80"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
     networks:
-      - kai_network
+      - app-network
 
-volumes:
-  mysql_data:
-  kai_storage:
+  db:
+    image: mysql:8.0
+    container_name: kai-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
 
 networks:
-  kai_network:
+  app-network:
     driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
