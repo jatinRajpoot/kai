@@ -25,7 +25,7 @@ services:
       # Let's REMOVE the code volume mount to ensure we use the baked code.
       - kai_storage:/var/www/html/storage
     ports:
-      - "8080:8080"
+      - "8880:80"
     depends_on:
       - mysql
     networks:
