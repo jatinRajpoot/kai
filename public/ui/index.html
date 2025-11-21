@@ -349,13 +349,13 @@
                         <h2>Backup &amp; Restore</h2>
                     </div>
                     <div class="grid-2 lists-grid">
-                        <div class="card-block">
+                        <div class="panel-form">
                             <h3>Download snapshot</h3>
                             <p>Export a JSON copy of every table for safekeeping.</p>
                             <button type="button" id="backupDownloadBtn">Create Backup</button>
                             <p class="status-text" id="backupExportStatus">No backup generated yet.</p>
                         </div>
-                        <div class="card-block">
+                        <div class="panel-form">
                             <h3>Import snapshot</h3>
                             <p>Restore from a file exported by KAI. Existing rows are replaced per table.</p>
                             <form id="backupImportForm" class="stacked-form">
@@ -387,7 +387,7 @@
         </div>
     </div>
 
-    <script src="/ui/app.js" type="module"></script>
+    <script src="/ui/js/core/app.js" type="module"></script>
 </body>
 
 </html>
